@@ -4,7 +4,7 @@ import BlackjackTrainer from './components/BlackjackTrainer';
 
 function App() {
   return (
-    <div className="min-h-screen bg-transparent overflow-hidden relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#2B4B6F80] via-[#46597380] to-[#34495E80] overflow-hidden relative">
       {[...Array(10)].map((_, index) => (
         <motion.div
           key={index}

@@ -9,8 +9,10 @@ const BlackjackTrainer = () => {
   const [deck, setDeck] = useState([]);
   const [decksRemaining, setDecksRemaining] = useState(6);
   const [deckCounts, setDeckCounts] = useState({});  // Track exact counts of each card value
-  const [splitHands, setSplitHands] = useState(null);
-  const [currentSplitHand, setCurrentSplitHand] = useState(1);
+  // eslint-disable-next-line no-unused-vars
+const [splitHands, setSplitHands] = useState(null);
+// eslint-disable-next-line no-unused-vars
+const [currentSplitHand, setCurrentSplitHand] = useState(1);
 
 
   const initializeDeck = () => {
@@ -70,7 +72,7 @@ const BlackjackTrainer = () => {
   const calculateHandValue = (hand) => {
     let value = 0;
     let aces = 0;
-
+  
     for (const card of hand) {
       if (card.value === 'A') {
         aces += 1;
@@ -78,7 +80,7 @@ const BlackjackTrainer = () => {
         value += getCardValue(card);
       }
     }
-
+  
     for (let i = 0; i < aces; i++) {
       if (value + 11 <= 21) {
         value += 11;
@@ -86,7 +88,7 @@ const BlackjackTrainer = () => {
         value += 1;
       }
     }
-
+  
     return value;
   };
 
@@ -99,7 +101,8 @@ const BlackjackTrainer = () => {
     }
     return bustProb;
   };
-
+  // eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line no-unused-vars
   const calculateDealerProbabilities = (upCard) => {
      const results = {
       bust: 0,
@@ -109,10 +112,11 @@ const BlackjackTrainer = () => {
       twenty: 0,
       twentyone: 0
     };
-    
+     // eslint-disable-next-line no-unused-vars
     let iterations = 10000;
     for (let i = 0; i < iterations; i++) {
       let currentValue = getCardValue(upCard);
+      // eslint-disable-next-line no-unused-vars
       let currentHand = [upCard];
       
       while (currentValue < 17) {
@@ -131,6 +135,7 @@ const BlackjackTrainer = () => {
           case 19: results.nineteen++; break;
           case 20: results.twenty++; break;
           case 21: results.twentyone++; break;
+          default: break;
         }
       }
     }
@@ -260,51 +265,37 @@ const calculateSplitEV = (dealerUpCard) => {
   let ev = 0;
   let totalProb = 0;
   
-  // Handle first split hand
+  // For each possible card drawn to each split hand
   for (let firstCard = 2; firstCard <= 11; firstCard++) {
-      const firstProb = calculateExactProbability(firstCard);
-      if (firstProb > 0) {
-          let firstHandValue = cardValue;
-          // Special handling for Aces
-          if (firstCard === 11) {
-              firstHandValue += (firstHandValue + 11 <= 21) ? 11 : 1;
-          } else {
-              firstHandValue += firstCard;
-          }
-          
-          // Handle second split hand
-          for (let secondCard = 2; secondCard <= 11; secondCard++) {
-              const secondProb = calculateExactProbability(secondCard);
-              if (secondProb > 0) {
-                  let secondHandValue = cardValue;
-                  // Special handling for Aces
-                  if (secondCard === 11) {
-                      secondHandValue += (secondHandValue + 11 <= 21) ? 11 : 1;
-                  } else {
-                      secondHandValue += secondCard;
-                  }
-                  
-                  // Calculate optimal play for each hand
-                  const firstHandEV = firstHandValue === 21 ? 1 : Math.max(
-                      calculateStandEV(firstHandValue, dealerUpCard),
-                      calculateHitEV(firstHandValue, dealerUpCard)
-                  );
-                  
-                  const secondHandEV = secondHandValue === 21 ? 1 : Math.max(
-                      calculateStandEV(secondHandValue, dealerUpCard),
-                      calculateHitEV(secondHandValue, dealerUpCard)
-                  );
-                  
-                  const combinedProb = firstProb * secondProb;
-                  ev += combinedProb * (firstHandEV + secondHandEV);
-                  totalProb += combinedProb;
-              }
-          }
-      }
+    const firstProb = calculateExactProbability(firstCard);
+    if (firstProb <= 0) continue;
+    
+    let firstTotal = cardValue + firstCard;
+    if (firstCard === 11 && firstTotal > 21) firstTotal = cardValue + 1;
+    
+    for (let secondCard = 2; secondCard <= 11; secondCard++) {
+      const secondProb = calculateExactProbability(secondCard);
+      if (secondProb <= 0) continue;
+      
+      let secondTotal = cardValue + secondCard;
+      if (secondCard === 11 && secondTotal > 21) secondTotal = cardValue + 1;
+      
+      const firstEV = firstTotal >= 21 ? -1 : Math.max(
+        calculateStandEV(firstTotal, dealerUpCard),
+        calculateHitEV(firstTotal, dealerUpCard)
+      );
+      
+      const secondEV = secondTotal >= 21 ? -1 : Math.max(
+        calculateStandEV(secondTotal, dealerUpCard),
+        calculateHitEV(secondTotal, dealerUpCard)
+      );
+      
+      ev += firstProb * secondProb * (firstEV + secondEV);
+      totalProb += firstProb * secondProb;
+    }
   }
   
-  // Account for double bet and normalize
-  return totalProb > 0 ? (ev / totalProb) - 1 : -999;
+  return totalProb > 0 ? ev / 2 : -999;
 };
   
 
@@ -334,64 +325,69 @@ const calculateSplitEV = (dealerUpCard) => {
     return card;
 };
 
-const split = () => {
-  if (playerHand.length !== 2 || playerHand[0].value !== playerHand[1].value) {
-      return;
-  }
-  
-  // Create two hands from the split
-  const card1 = playerHand[0];
-  const card2 = playerHand[1];
-  
-  // Draw new cards for each hand
-  const new_card1 = drawCard();
-  const new_card2 = drawCard();
-  
-  if (!new_card1 || !new_card2) return;
-  
-  // Create hands and set state
-  const hand1 = [card1, new_card1];
-  const hand2 = [card2, new_card2];
+const handleSplit = () => {
+  const hand1Card = playerHand[0];
+  const hand2Card = playerHand[1];
+  const newCard1 = drawCard();
+  const newCard2 = drawCard();
   
   setSplitHands({
-      currentHand: 1,
-      hand1: hand1,
-      hand2: hand2,
-      hand1Complete: false,
-      hand2Complete: false
+    currentHand: 1,
+    hand1: [hand1Card, newCard1],
+    hand2: [hand2Card, newCard2],
+    hand1Complete: false,
+    hand2Complete: false
   });
 
-  setPlayerHand(hand1);
-  setGameState('playing_split');
+  // Show first hand initially
+  setPlayerHand([hand1Card, newCard1]);
+};
+
+// Add this to track completion of hands
+const completeHand = () => {
+  if (splitHands.currentHand === 1) {
+    setSplitHands({
+      ...splitHands,
+      hand1Complete: true,
+      currentHand: 2
+    });
+    setPlayerHand(splitHands.hand2);
+  } else {
+    // Both hands complete
+    stand();
+  }
 };
 
 
-  const calculateOptimalStrategy = () => {
-    const playerValue = calculateHandValue(playerHand);
-    const dealerUpCard = dealerHand[0];
-    const strategies = [];
+const calculateOptimalStrategy = () => {
+  const playerValue = calculateHandValue(playerHand);
+  const dealerUpCard = dealerHand[0];
+  const strategies = [];
+  
+  // Basic actions
+  const standEV = calculateStandEV(playerValue, dealerUpCard);
+  const hitEV = calculateHitEV(playerValue, dealerUpCard);
+  
+  strategies.push(
+    { action: 'Stand', ev: standEV },
+    { action: 'Hit', ev: hitEV }
+  );
+  
+  // Initial two-card options
+  if (playerHand.length === 2) {
+    strategies.push({ action: 'Double', ev: calculateDoubleEV(playerValue, dealerUpCard) });
+    strategies.push({ action: 'Surrender', ev: -0.5 }); 
     
-    // Basic actions
-    const standEV = calculateStandEV(playerValue, dealerUpCard);
-    const hitEV = calculateHitEV(playerValue, dealerUpCard);
-    
-    strategies.push(
-      { action: 'Stand', ev: standEV },
-      { action: 'Hit', ev: hitEV }
-    );
-    
-    // Initial two-card options
-    if (playerHand.length === 2) {
-      strategies.push({ action: 'Double', ev: calculateDoubleEV(playerValue, dealerUpCard) });
-      strategies.push({ action: 'Surrender', ev: -0.5 }); // Surrender is always -0.5
-      
-      if (playerHand[0].value === playerHand[1].value) {
-        strategies.push({ action: 'Split', ev: calculateSplitEV(dealerUpCard) });
-      }
+    if (playerHand.length === 2 && (
+      playerHand[0].value === playerHand[1].value || 
+      (getCardValue(playerHand[0]) === 10 && getCardValue(playerHand[1]) === 10)
+    )) {
+      strategies.push({ action: 'Split', ev: calculateSplitEV(dealerUpCard) });
     }
-    
-    return strategies.sort((a, b) => b.ev - a.ev);
-  };
+  }
+  
+  return strategies.sort((a, b) => b.ev - a.ev);
+};
   
   const updateCounts = (cards) => {
     const newRunningCount = cards.reduce((count, card) => count + getCardCount(card), runningCount);
@@ -431,22 +427,48 @@ const split = () => {
     updateCounts([card]);
     
     if (calculateHandValue(newHand) > 21) {
-      setGameState('bust');
+      if (splitHands && !splitHands.hand1Complete) {
+        setSplitHands({
+          ...splitHands,
+          hand1Complete: true,
+          hand1: newHand
+        });
+        setPlayerHand(splitHands.hand2);
+      } else {
+        setGameState('bust');
+      }
     }
   };
 
   const stand = () => {
-    let currentDealerHand = [...dealerHand];
-    
-    while (calculateHandValue(currentDealerHand) < 17) {
-      const card = drawCard();
-      if (!card) break;
-      currentDealerHand.push(card);
-      updateCounts([card]);
+    if (splitHands && !splitHands.hand1Complete) {
+      setSplitHands({
+        ...splitHands,
+        hand1Complete: true,
+        hand1: playerHand
+      });
+      setPlayerHand(splitHands.hand2);
+    } else if (splitHands) {
+      let currentDealerHand = [...dealerHand];
+      while (calculateHandValue(currentDealerHand) < 17) {
+        const card = drawCard();
+        if (!card) break;
+        currentDealerHand.push(card);
+        updateCounts([card]);
+      }
+      setDealerHand(currentDealerHand);
+      setGameState('complete');
+    } else {
+      let currentDealerHand = [...dealerHand];
+      while (calculateHandValue(currentDealerHand) < 17) {
+        const card = drawCard();
+        if (!card) break;
+        currentDealerHand.push(card);
+        updateCounts([card]);
+      }
+      setDealerHand(currentDealerHand);
+      setGameState('complete');
     }
-    
-    setDealerHand(currentDealerHand);
-    setGameState('complete');
   };
 
   useEffect(() => {
@@ -505,11 +527,32 @@ const split = () => {
       </div>
 
       <div style={{ marginBottom: '20px' }}>
-        <h3>Player ({calculateHandValue(playerHand)})</h3>
-        <div style={{ display: 'flex' }}>
-          {playerHand.map((card, i) => renderCard(card))}
-        </div>
+  {splitHands ? (
+    <>
+      <h3>Split Hand 1 ({calculateHandValue(!splitHands.hand1Complete ? playerHand : splitHands.hand1)})</h3>
+      <div style={{ display: 'flex' }}>
+        {!splitHands.hand1Complete ? 
+          playerHand.map((card, i) => renderCard(card)) :
+          splitHands.hand1.map((card, i) => renderCard(card))
+        }
       </div>
+      <h3>Split Hand 2 ({calculateHandValue(splitHands.hand1Complete ? playerHand : splitHands.hand2)})</h3>
+      <div style={{ display: 'flex' }}>
+        {splitHands.hand1Complete ? 
+          playerHand.map((card, i) => renderCard(card)) :
+          splitHands.hand2.map((card, i) => renderCard(card))
+        }
+      </div>
+    </>
+  ) : (
+    <>
+      <h3>Player ({calculateHandValue(playerHand)})</h3>
+      <div style={{ display: 'flex' }}>
+        {playerHand.map((card, i) => renderCard(card))}
+      </div>
+    </>
+  )}
+</div>
 
       <div style={{ marginBottom: '20px' }}>
         {gameState === 'betting' && (
@@ -531,8 +574,17 @@ const split = () => {
         {gameState === 'playing' && (
           <div>
            {['Hit', 'Stand', 'Double', 'Split', 'Surrender'].filter(action => {
-              if (action === 'Double' || action === 'Surrender') return playerHand.length === 2;
-              if (action === 'Split') return playerHand.length === 2 && playerHand[0].value === playerHand[1].value;
+              if (action === 'Double' || action === 'Surrender') return playerHand.length === 2 && !splitHands;
+              if (action === 'Split') {
+                return playerHand.length === 2 && (
+                  playerHand[0].value === playerHand[1].value || 
+                  (["10", "J", "Q", "K"].includes(playerHand[0].value) && 
+                   ["10", "J", "Q", "K"].includes(playerHand[1].value))
+                );
+              }
+              playerHand[0].value === playerHand[1].value || 
+(["J", "Q", "K", "10"].includes(playerHand[0].value) && 
+ ["J", "Q", "K", "10"].includes(playerHand[1].value))
               return true;
             }).map((action) => (
               <button
@@ -541,9 +593,10 @@ const split = () => {
                   switch(action) {
                     case 'Hit': hit(); break;
                     case 'Stand': stand(); break;
-                    case 'Double': hit(); setGameState('complete'); break;
-                    case 'Split': /* Implement split logic */ break;
+                    case 'Double': hit(); stand(); break;
+                    case 'Split': handleSplit(); break;
                     case 'Surrender': setGameState('complete'); break;
+                    default: break;
                   }
                 }}
                 style={{
@@ -564,7 +617,12 @@ const split = () => {
         )}
         {['bust', 'complete'].includes(gameState) && (
           <button
-            onClick={() => { setGameState('betting'); setPlayerHand([]); setDealerHand([]); }}
+          onClick={() => { 
+            setGameState('betting'); 
+            setPlayerHand([]); 
+            setDealerHand([]);
+            setSplitHands(null);  // Add this line
+          }}
             style={{
               padding: '8px 16px',
               fontSize: '16px',
@@ -585,7 +643,7 @@ const split = () => {
           border: '1px solid #ccc', 
           padding: '15px', 
           borderRadius: '4px',
-          backgroundColor: '#f5f5f5'
+          backgroundColor: 'rgba(218, 165, 32, 0.2)'
         }}>
           <h3 style={{ marginTop: 0 }}>Strategy Advice</h3>
           {calculateOptimalStrategy().map((strat, i) => (
